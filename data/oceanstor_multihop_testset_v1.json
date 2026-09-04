@@ -1,0 +1,420 @@
+{
+  "dataset_name": "OceanStor_Dorado_Fault_Handling_MultiHop_Test_v1",
+  "version": "1.0.0",
+  "language": "zh-CN",
+  "split": "test",
+  "created_at": "2026-07-13",
+  "source_document": {
+    "title": "OceanStor Dorado V6系列 6.1.x & V700R001 故障处理",
+    "document_version": "14",
+    "release_date": "2025-09-30",
+    "page_count": 81,
+    "source_path": "/Users/chy/Desktop/实习/数据/OceanStor Dorado V6系列 6.1.x & V700R001 故障处理.pdf"
+  },
+  "design_basis": {
+    "pipeline_report": "/Users/chy/Desktop/文档15_DataFlow技术文档QA流水线完整技术报告.plan.md",
+    "principles": [
+      "答案事实集必须是证据集合事实集的子集，不允许补充手册之外的命令、阈值、版本或机制",
+      "每题至少依赖两个独立证据节点，且不能由任一单一证据节点完整回答",
+      "问题采用真实运维现象和目标作为入口，不在题干中泄漏关键结论、命令或阈值",
+      "标准答案直接给出决策、动作、条件和验收点，不使用“根据文档”“原文指出”等元信息托词",
+      "评分以关键结论覆盖为主，不要求模型复现固定措辞，也不要求输出隐藏思维过程"
+    ]
+  },
+  "inference_contract": {
+    "model_input_fields": ["question"],
+    "hidden_from_model_fields": ["reference_answer", "reasoning_outline", "required_evidence_ids", "rubric_id"],
+    "expected_answer_style": "直接作答；使用一种主组织形式；最多两级结构；不添加出处套话、礼貌语或无支撑扩写",
+    "citation_required": false
+  },
+  "evidence_library": [
+    {
+      "evidence_id": "E01",
+      "section": "2.4 故障分级",
+      "document_page": 8,
+      "pdf_page": 18,
+      "fact": "性能下降导致主机I/O延迟或业务中断属于中级故障，采用应急处理；多个部件故障导致部分生产系统不可用或数据丢失风险很高属于严重故障，也采用应急处理。"
+    },
+    {
+      "evidence_id": "E02",
+      "section": "2.6.1 普通故障处理",
+      "document_page": 9,
+      "pdf_page": 19,
+      "fact": "性能和主机业务均不受影响的故障属于普通故障；处理包括收集信息、登录DeviceManager查看状态和事件、按修复建议处理、定位原因，无法排除时携带已收集信息联系技术支持。"
+    },
+    {
+      "evidence_id": "E03",
+      "section": "2.6.2 应急处理",
+      "document_page": 13,
+      "pdf_page": 23,
+      "fact": "中级或严重故障需启动应急预案，收集信息，第一时间向华为通告，确定影响范围，处理故障恢复主机业务，必要时联系技术支持，并记录故障信息和处理步骤。"
+    },
+    {
+      "evidence_id": "E04",
+      "section": "2.7 基本原则",
+      "document_page": 14,
+      "pdf_page": 24,
+      "fact": "定位顺序是先外部后内部、先高级别告警后低级别告警、先共性告警后个别告警；有数据丢失风险时暂停主机业务或切换至备机并备份；应急过程完整记录所有操作；先恢复核心业务再恢复其他业务。"
+    },
+    {
+      "evidence_id": "E05",
+      "section": "2.8.1 告警信息分析法",
+      "document_page": 15,
+      "pdf_page": 25,
+      "fact": "告警信息配合性能数据可用于判断故障类型和位置；能正常收集告警时，该方法适用于定位任何故障。"
+    },
+    {
+      "evidence_id": "E06",
+      "section": "2.8.2 替换法",
+      "document_page": 15,
+      "pdf_page": 25,
+      "fact": "替换法用正常部件替换疑似异常部件，适用于硬件故障；其前提是事先准备相同备件。"
+    },
+    {
+      "evidence_id": "E07",
+      "section": "2.3 备件准备",
+      "document_page": 7,
+      "pdf_page": 17,
+      "fact": "可准备的备件包括光模块、光纤跳线、屏蔽双绞线、接口模块等。"
+    },
+    {
+      "evidence_id": "E08",
+      "section": "3.1 收集现网信息",
+      "document_page": 16,
+      "pdf_page": 26,
+      "fact": "现网信息包括设备序列号和版本、故障准确时间与现象、故障前后操作、硬件和指示灯、系统数据与告警日志、组网方式和拓扑、交换机信息、应用服务器操作系统版本和日志。"
+    },
+    {
+      "evidence_id": "E09",
+      "section": "3.2 收集故障信息",
+      "document_page": 17,
+      "pdf_page": 27,
+      "fact": "收集故障信息前先评估业务影响，必要时备份数据，并取得相应授权。"
+    },
+    {
+      "evidence_id": "E10",
+      "section": "3.2.1 检查主机端信息 - Linux",
+      "document_page": 18,
+      "pdf_page": 28,
+      "fact": "Linux可用 rpm -qa | grep UltraPath 检查安装，用 upadmin show path 查看物理路径，用 upadmin show vlun 和 upadmin show vlun id=? 查看虚拟磁盘与逻辑路径，用 upadmin show upconfig 查看配置。"
+    },
+    {
+      "evidence_id": "E11",
+      "section": "3.2.5 收集HBA信息 - Linux",
+      "document_page": 26,
+      "pdf_page": 36,
+      "fact": "cat /sys/class/scsi_host/hostX/symbolic_name 查看HBA厂商和型号；modinfo qla2xxx 查看Qlogic驱动版本；modinfo lpfc 查看Emulex驱动版本。"
+    },
+    {
+      "evidence_id": "E12",
+      "section": "3.2.6.2 收集FC交换机信息 - Brocade",
+      "document_page": 29,
+      "pdf_page": 39,
+      "fact": "Brocade日志收集需准备FTP服务器信息，SSH登录后执行 supportsave，并输入服务器地址、用户名、密码、ftp或scp协议及远端目录。"
+    },
+    {
+      "evidence_id": "E13",
+      "section": "3.2.6.3 检查SFP信息",
+      "document_page": 30,
+      "pdf_page": 40,
+      "fact": "Brocade使用 sfpshow portnum 查看SFP；TX Power绝对值大于4.6表示SFP发光功率低且自身存在问题，RX Power绝对值大于5表示链路衰减较大、链路质量存在问题。"
+    },
+    {
+      "evidence_id": "E14",
+      "section": "3.2.7.1.1 导出系统数据",
+      "document_page": 32,
+      "pdf_page": 42,
+      "fact": "性能文件包含历史性能文件，导出前需要已在监控设置中保存历史监控数据；精简诊断文件仅适用于6.1.8及后续版本。"
+    },
+    {
+      "evidence_id": "E15",
+      "section": "3.2.7.1.1 导出系统数据 - 数据加密",
+      "document_page": 33,
+      "pdf_page": 43,
+      "fact": "数据加密口令长度8到16个字符，必须含特殊字符，并包含大写、小写、数字三类中的任意两类。"
+    },
+    {
+      "evidence_id": "E15B",
+      "section": "3.2.7.1.1 导出系统数据 - 系统日志范围",
+      "document_page": 35,
+      "pdf_page": 45,
+      "fact": "近期日志截止当前不超过15天且不含管理面和智能硬盘框级联模块日志；全部日志可选择包含管理面日志，存储配置日志失败、用户登录失败、性能监控无数据、智能推荐服务无响应时应选择包含管理面日志。"
+    },
+    {
+      "evidence_id": "E16",
+      "section": "3.2.7.1.1 导出系统数据 - 解密",
+      "document_page": 35,
+      "pdf_page": 45,
+      "fact": "加密日志需在支持OpenSSL 1.1.1f及以上的Linux上使用 aes-256-ctr 解密；可执行 sudo openssl enc -aes-256-ctr -d -k 加密口令 -in 待解密文件名 -out 解密后文件名。"
+    },
+    {
+      "evidence_id": "E17",
+      "section": "3.2.7.1.2.1 设置诊断开关",
+      "document_page": 35,
+      "pdf_page": 45,
+      "fact": "诊断任务适用于6.1.8及后续版本；只能用CLI开关诊断功能；开启命令为 settaskswitch.sh -a -n TASK_FAULT_TREE_SWITCH -s 1；剩余内存小于700MB会开启失败；执行后约十分钟开启。"
+    },
+    {
+      "evidence_id": "E18",
+      "section": "3.2.7.1.2.2 创建诊断任务",
+      "document_page": 36,
+      "pdf_page": 46,
+      "fact": "在监控-诊断中创建任务，可选主机业务异常、性能异常、业务面协议异常及最近4小时或自定义时间；如需最新对象或原始数据，先开始采集并等到所有事件出现“故障诊断信息采集成功”；默认诊断超时5分钟。"
+    },
+    {
+      "evidence_id": "E19",
+      "section": "3.2.7.1.2.4-5 查看诊断进度和结果",
+      "document_page": 37,
+      "pdf_page": 47,
+      "fact": "通过诊断任务ID查看进度或结果，可看到异常、可能根因、修复建议和故障树。"
+    },
+    {
+      "evidence_id": "E20",
+      "section": "3.2.7.2.1 SmartKit导出系统数据",
+      "document_page": 39,
+      "pdf_page": 49,
+      "fact": "快速问题定位收集近期日志，不含管理面和智能硬盘框级联模块日志，约60MB每控、约10分钟；深度问题分析收集全部日志、Smart信息、DHA信息和CLI回显，默认不含管理面日志但可选，约140MB每控、约30分钟。"
+    },
+    {
+      "evidence_id": "E21",
+      "section": "3.2.7.2.2 导出历史性能数据",
+      "document_page": 40,
+      "pdf_page": 50,
+      "fact": "SmartKit添加设备时端口默认22；导出历史性能数据时选择设备和保存路径、历史性能、导出类型、时间段，可选压缩成ZIP供eService查看，等待进度显示“收集完成”，还可合并或加入列表查看。"
+    },
+    {
+      "evidence_id": "E22",
+      "section": "3.2.7.3 检查所有事件",
+      "document_page": 44,
+      "pdf_page": 54,
+      "fact": "所有事件保存提示级事件和所有已修复告警，可按级别、对象或时间筛选，按修复建议处理；导出全部为tgz、导出所选为xls，且不得修改文件内容。"
+    },
+    {
+      "evidence_id": "E23",
+      "section": "3.2.7.4 检查告警信息",
+      "document_page": 45,
+      "pdf_page": 55,
+      "fact": "当前告警保存尚未修复的告警，可筛选并按修复建议处理；模拟告警若已存在则再次发送无效，测试前后都需手工清除。"
+    },
+    {
+      "evidence_id": "E24",
+      "section": "3.2.7.5 非正常状态下收集故障信息",
+      "document_page": 45,
+      "pdf_page": 55,
+      "fact": "非正常模式下DeviceManager正常页面和CLI均不可用时，访问 https://ipaddress:8088，输入存储管理员用户名和密码，在故障页面下载日志。"
+    }
+  ],
+  "items": [
+    {
+      "id": "OSD-MH-001",
+      "title": "业务时延场景的分级与应急顺序",
+      "scenario": "Incident",
+      "question_type": "DiagnosticDecision",
+      "difficulty": "hard",
+      "estimated_hops": 5,
+      "question": "生产环境出现存储性能下降，多个主机同时出现I/O延迟，但目前没有证据表明多个存储部件同时故障，也没有确认数据已经丢失。值班人员应如何判定故障等级和处理方式，并给出从启动响应到恢复业务的有序处理方案？方案必须说明告警与内外部排查顺序，以及出现数据丢失风险时的业务处置。",
+      "required_evidence_ids": ["E01", "E03", "E04", "E08", "E09"],
+      "reference_answer": "该故障判定为中级故障，采用应急处理；在没有多个部件故障、部分生产系统不可用或高数据丢失风险证据时，不直接判为严重故障。处理顺序为：启动应急预案；取得授权并评估业务影响，收集准确时间、现象、故障前后操作、主机与存储日志、组网和告警信息；第一时间向华为通告并确定影响范围；先分析高级别告警，再看低级别告警，先判断多个主机的共性问题，再查个别问题，定位时先排除光纤、交换机、客户设备、断电等外部因素，再查硬盘、控制器、接口模块等内部因素；处理故障以恢复主机业务，无法排除时携带已收集信息联系技术支持；全程记录故障信息和每项操作。若出现可能导致数据丢失的情况，暂停主机业务或切换至备机并及时备份，恢复时先恢复核心业务，再恢复其他业务。",
+      "reasoning_outline": [
+        "由性能下降和主机I/O延迟映射到中级故障，而非仅凭严重感受升级为严重故障",
+        "由中级故障映射到应急处理流程",
+        "把应急流程与信息收集的授权、影响评估和证据范围结合",
+        "把告警优先级、共性优先和外部优先组合为排查顺序",
+        "把数据丢失风险触发条件映射到业务暂停或切换、备份和核心业务优先恢复"
+      ],
+      "answer_format": "有序步骤，首句必须给出故障等级与处理方式",
+      "rubric_id": "R-OSD-MH-001",
+      "tags": ["故障分级", "应急处理", "排查顺序", "业务连续性", "风险控制"]
+    },
+    {
+      "id": "OSD-MH-002",
+      "title": "管理面与CLI不可用时的闭环处理",
+      "scenario": "Incident",
+      "question_type": "FallbackProcedure",
+      "difficulty": "hard",
+      "estimated_hops": 4,
+      "question": "某存储系统处于非正常模式，DeviceManager正常页面和CLI都无法导出信息，但存储性能和主机业务尚未受到影响。请给出故障分级、信息收集前置条件、可用的日志下载入口与操作，以及日志收集后仍无法排除故障时的下一步。",
+      "required_evidence_ids": ["E02", "E09", "E24"],
+      "reference_answer": "该场景属于普通故障，采用普通故障处理。收集前先评估对业务的影响，必要时备份数据并取得相应授权。使用浏览器访问 https://<存储系统管理网口IP>:8088，输入存储系统管理员用户名和密码进入故障界面，在故障页面下载日志并查看详细信息。完成信息收集后仍无法排除故障，携带故障相关信息联系华为技术支持。",
+      "reasoning_outline": [
+        "业务和性能无影响映射到普通故障",
+        "把任何信息收集动作置于影响评估、必要备份和授权之后",
+        "由正常页面和CLI均不可用切换到8088故障界面",
+        "把日志收集与普通故障无法排除后的升级支持连接成闭环"
+      ],
+      "answer_format": "编号步骤",
+      "rubric_id": "R-OSD-MH-002",
+      "tags": ["普通故障", "非正常模式", "8088", "日志收集", "升级支持"]
+    },
+    {
+      "id": "OSD-MH-003",
+      "title": "Linux FC闪断的端到端证据链",
+      "scenario": "Problem",
+      "question_type": "CrossLayerDiagnosis",
+      "difficulty": "hard",
+      "estimated_hops": 6,
+      "question": "Linux主机经Brocade FC交换机访问存储时发生多路径闪断。某端口读数为TX Power -5.0 dBm、RX Power -6.3 dBm。请按合理的定位顺序说明需要从主机路径、HBA、交换机日志和SFP四个层面采集什么证据、执行哪些对应命令，并解释这两个光功率读数分别支持什么判断。",
+      "required_evidence_ids": ["E04", "E10", "E11", "E12", "E13"],
+      "reference_answer": "先按外部后内部的顺序检查主机到交换机的链路，再决定是否转向存储内部。主机侧执行 rpm -qa | grep UltraPath 确认UltraPath安装，执行 upadmin show path 查看物理路径状态；需要锁定虚拟盘逻辑路径时执行 upadmin show vlun id=?。HBA侧执行 cat /sys/class/scsi_host/hostX/symbolic_name 获取厂商和型号；Qlogic卡执行 modinfo qla2xxx，Emulex卡执行 modinfo lpfc 获取驱动版本。Brocade交换机使用SSH登录后执行 supportsave，并提供FTP或SCP服务器地址、用户名、密码、协议和远端目录以收集支持信息；端口SFP执行 sfpshow portnum。TX Power为-5.0 dBm，绝对值5.0大于4.6，支持SFP发光功率低、SFP自身存在问题的判断；RX Power为-6.3 dBm，绝对值6.3大于5，支持链路衰减较大、链路质量存在问题的判断。两项阈值同时命中，因此既保留SFP自身问题证据，也保留链路质量问题证据。",
+      "reasoning_outline": [
+        "用先外部后内部原则限定排查方向",
+        "把闪断现象映射到Linux物理路径和逻辑路径证据",
+        "根据HBA厂商分支选择驱动版本命令",
+        "把Brocade supportsave的执行与传输前置参数连接",
+        "分别对TX和RX取绝对值并与不同阈值比较",
+        "合并两个判断而不是错误地二选一"
+      ],
+      "answer_format": "按主机、HBA、交换机、SFP顺序编号",
+      "rubric_id": "R-OSD-MH-003",
+      "tags": ["Linux", "FC", "UltraPath", "Brocade", "SFP", "阈值判断"]
+    },
+    {
+      "id": "OSD-MH-004",
+      "title": "低内存条件下创建最新诊断任务",
+      "scenario": "Incident",
+      "question_type": "VersionConditionedProcedure",
+      "difficulty": "hard",
+      "estimated_hops": 5,
+      "question": "一套6.1.8存储的诊断功能当前关闭，系统剩余内存为650MB。运维人员需要基于最新对象实例和最新原始数据创建“性能异常”诊断任务。请说明当前阻断条件、解除阻断后的开关操作与等待要求、创建任务前的数据采集验收点、任务创建选项，以及任务运行后的查看内容。",
+      "required_evidence_ids": ["E17", "E18", "E19"],
+      "reference_answer": "650MB低于700MB，当前开启诊断功能会失败，应先解除剩余内存不足的阻断条件。条件满足后登录CLI并切换到最小模式，执行 settaskswitch.sh -a -n TASK_FAULT_TREE_SWITCH -s 1，命令执行后等待约十分钟使诊断功能开启。随后进入“监控 > 诊断”，先单击“开始采集”，并在“告警与事件 > 所有事件”中确认出现“故障诊断信息采集成功”，再创建任务。诊断类型选择“性能异常”，时间范围选择“最近4小时”或按场景设置“自定义”的开始和结束时间，然后确认创建。任务默认超时时间为5分钟；运行中或完成后通过任务ID查看诊断进度或结果，核对已发现的异常、可能根因、修复建议和故障树。",
+      "reasoning_outline": [
+        "先判断版本满足诊断任务适用范围",
+        "将650MB与700MB失败条件比较并识别硬阻断",
+        "解除阻断后使用唯一允许的CLI开关方式并等待生效",
+        "为最新数据增加开始采集和事件成功验收点",
+        "把故障类型、时间范围、默认超时和结果查看串成闭环"
+      ],
+      "answer_format": "编号步骤，必须先说明为何当前不能直接执行",
+      "rubric_id": "R-OSD-MH-004",
+      "tags": ["6.1.8", "诊断任务", "内存门槛", "CLI", "验收点"]
+    },
+    {
+      "id": "OSD-MH-005",
+      "title": "跨时间窗口的历史性能数据交付",
+      "scenario": "Capacity",
+      "question_type": "DataCollectionWorkflow",
+      "difficulty": "hard",
+      "estimated_hops": 4,
+      "question": "某性能抖动发生在13天前，历史监控数据已经保存。现在需要用SmartKit导出指定时间段的数据，生成可导入eService的包，并把多个历史性能文件合并后交给华为工程师分析。请给出从添加设备到完成交付的完整操作链和完成标志。",
+      "required_evidence_ids": ["E08", "E14", "E21"],
+      "reference_answer": "先记录设备序列号和版本、故障准确时间与现象。运行SmartKit并添加设备，填写管理IP、用户名、密码和端口，端口默认值为22。进入“故障处理 > 历史性能监控 > 选择设备”，勾选设备并可设置任务结果保存路径；打开“历史性能”，选择“导出”，导出类型选“历史性能数据”，在过滤条件中设置覆盖故障时间的开始日期和结束日期。勾选“压缩成ZIP”，使生成的压缩包可导入eService，然后执行导出并等待进度显示“收集完成”。需要检查文件时打开导出目录；多个历史性能数据文件通过“合并”功能按界面提示合并。完成后将数据交给华为技术工程师定位分析。",
+      "reasoning_outline": [
+        "先用故障准确时间确定导出窗口并补齐设备身份信息",
+        "确认历史监控数据已保存，满足导出性能文件的前提",
+        "完成SmartKit设备接入并进入历史性能导出路径",
+        "选择时间范围和ZIP以满足eService交付目标",
+        "以“收集完成”为验收点，再合并并交付分析"
+      ],
+      "answer_format": "编号步骤",
+      "rubric_id": "R-OSD-MH-005",
+      "tags": ["SmartKit", "历史性能", "eService", "时间窗口", "交付"]
+    },
+    {
+      "id": "OSD-MH-006",
+      "title": "快速定位到深度分析的采集策略切换",
+      "scenario": "Incident",
+      "question_type": "StrategyComparison",
+      "difficulty": "hard",
+      "estimated_hops": 4,
+      "question": "值班人员先要在较短时间内采集材料做快速定位；如果不足，再转为深度分析。故障同时涉及管理面登录失败。请设计两阶段SmartKit采集策略，比较每阶段的日志范围、预计体量与时长，并说明第二阶段如何避免遗漏与管理面相关的证据。",
+      "required_evidence_ids": ["E20", "E15B"],
+      "reference_answer": "第一阶段选择“快速问题定位”，收集系统日志的近期日志；该包不含管理面日志和智能硬盘框级联模块日志，约60MB/控，约10分钟完成。若材料不足，第二阶段选择“深度问题分析”，收集系统日志的全部日志、硬盘Smart信息、DHA信息和CLI回显，约140MB/控，约30分钟完成。深度分析默认不含管理面日志，但管理面登录失败正是本次故障的一部分，因此第二阶段应选择包含管理面日志的全部日志，不能沿用默认排除管理面日志的设置。完成设备信息收集设置后单击“收集”，以页面状态和“打开收集目录”中的结果作为收集完成后的检查入口。",
+      "reasoning_outline": [
+        "根据时效目标选择快速问题定位作为第一阶段",
+        "识别近期日志的范围缺口和体量时长",
+        "根据深度分析目标切换到全部日志、硬盘信息和CLI回显",
+        "将管理面登录失败与默认不含管理面日志的限制关联，显式改选包含管理面日志",
+        "给出收集动作和结果检查入口"
+      ],
+      "answer_format": "两阶段对比，使用编号步骤",
+      "rubric_id": "R-OSD-MH-006",
+      "tags": ["SmartKit", "快速定位", "深度分析", "管理面日志", "策略选择"]
+    },
+    {
+      "id": "OSD-MH-007",
+      "title": "管理面故障的加密日志导出与解密",
+      "scenario": "Security",
+      "question_type": "SecureCollectionProcedure",
+      "difficulty": "hard",
+      "estimated_hops": 5,
+      "question": "DeviceManager出现用户登录失败并伴随性能监控无数据，需要导出相关日志后通过加密文件交付。请说明应选择哪类系统日志、为什么不能只选近期日志、加密口令必须满足什么规则，以及接收方在Linux上如何解密。",
+      "required_evidence_ids": ["E15", "E15B", "E16"],
+      "reference_answer": "应导出“全部日志”并选择包含管理面日志。近期日志虽然覆盖截止当前不超过15天的数据，但不收集管理面日志，无法覆盖用户登录失败和性能监控无数据所需的管理面证据。启用数据加密时，口令长度为8到16个字符，必须包含特殊字符，并包含大写字母、小写字母、数字三类中的任意两类。接收方使用支持OpenSSL 1.1.1f及以上版本的Linux系统，执行 sudo openssl enc -aes-256-ctr -d -k <加密口令> -in <待解密文件名> -out <解密后文件名> 完成解密。",
+      "reasoning_outline": [
+        "由故障对象识别管理面日志为必要证据",
+        "将近期日志的排除范围与证据需求比较，否定近期日志",
+        "选择全部日志并显式包含管理面日志",
+        "完整组合口令长度、特殊字符和字符类别规则",
+        "把OpenSSL版本前提、算法和输入输出参数连接为可执行解密动作"
+      ],
+      "answer_format": "先给日志选择结论，再给口令规则和解密命令",
+      "rubric_id": "R-OSD-MH-007",
+      "tags": ["DeviceManager", "全部日志", "管理面", "加密", "OpenSSL"]
+    },
+    {
+      "id": "OSD-MH-008",
+      "title": "多部件故障与数据丢失风险下的业务恢复",
+      "scenario": "Continuity",
+      "question_type": "EmergencyOrchestration",
+      "difficulty": "hard",
+      "estimated_hops": 5,
+      "question": "存储同时出现多个部件故障，部分生产系统已经不可用，且数据丢失风险很高；核心业务和非核心业务都受到影响。请给出故障定级、立即采取的业务保护动作、应急协同顺序、业务恢复优先级和全过程记录要求。",
+      "required_evidence_ids": ["E01", "E03", "E04", "E09"],
+      "reference_answer": "该场景属于严重故障，采用应急处理。立即启动应急预案；收集操作前取得授权并评估业务影响。由于存在数据丢失风险，暂停主机业务或将业务切换至备机，并及时备份数据。第一时间向华为通告事故并反馈已收集信息，确定故障影响范围，处理故障以恢复主机业务；无法排除时联系华为技术支持。恢复顺序为先恢复核心业务，再恢复其他业务。应急过程中完整记录所有操作，并记录故障信息和处理步骤。",
+      "reasoning_outline": [
+        "多个部件故障、部分生产不可用和高数据丢失风险共同映射到严重故障",
+        "严重故障映射到应急处理和启动预案",
+        "数据丢失风险触发暂停或切换与备份",
+        "把通告、影响范围、处理和技术支持按应急协同串联",
+        "把核心业务优先和全过程记录纳入恢复闭环"
+      ],
+      "answer_format": "编号步骤，首句给出严重故障结论",
+      "rubric_id": "R-OSD-MH-008",
+      "tags": ["严重故障", "数据保护", "应急预案", "核心业务", "审计记录"]
+    },
+    {
+      "id": "OSD-MH-009",
+      "title": "当前告警、历史事件与模拟告警的联合核验",
+      "scenario": "Availability",
+      "question_type": "StateAwareVerification",
+      "difficulty": "hard",
+      "estimated_hops": 4,
+      "question": "运维人员既要处理仍未修复的告警，又要核对已经修复的告警和提示级事件，最后还要用模拟告警验证上报功能。请说明两个查询入口各自应查什么、如何筛选和处理、导出文件的规则，以及模拟告警测试前后的必要动作。",
+      "required_evidence_ids": ["E22", "E23"],
+      "reference_answer": "仍未修复的告警进入“监控 > 告警和事件 > 当前告警”查询；提示级事件和已经修复的告警进入“监控 > 告警和事件 > 所有事件”查询。两个入口都可按级别、告警对象或发生时间筛选，单击描述后按右侧修复建议处理。导出全部告警或事件的文件类型为.tgz，导出所选项为.xls，导出后不得修改文件内容。验证告警上报功能前，先确认同一模拟告警已被手工清除；若它已经存在，再次发送无效。测试完成后再次手工清除该模拟告警。",
+      "reasoning_outline": [
+        "按未修复与已修复状态把对象路由到不同入口",
+        "把提示级事件归入所有事件",
+        "复用筛选与修复建议处理动作",
+        "根据导出范围映射tgz和xls并保持文件不变",
+        "把模拟告警存在性与发送有效性关联，形成测试前后清理闭环"
+      ],
+      "answer_format": "按当前告警、所有事件、模拟测试三部分编号",
+      "rubric_id": "R-OSD-MH-009",
+      "tags": ["当前告警", "所有事件", "状态区分", "导出", "模拟告警"]
+    },
+    {
+      "id": "OSD-MH-010",
+      "title": "共性FC链路故障的定位方法与备件决策",
+      "scenario": "Problem",
+      "question_type": "MethodSelection",
+      "difficulty": "hard",
+      "estimated_hops": 5,
+      "question": "多个主机同时出现相似的FC链路异常，告警和性能数据可以正常获取，现场准备采用替换法确认硬件问题。请说明在真正替换前应如何缩小范围、替换法何时适用及其前提，并结合该FC场景列出应优先准备的相关备件和替换后用于复核链路的命令与判断标准。",
+      "required_evidence_ids": ["E04", "E05", "E06", "E07", "E13"],
+      "reference_answer": "先结合告警信息和性能数据判断故障类型与位置；多个主机出现相似现象时先分析共性告警，再分析个别告警，并按先外部后内部的原则先排除光纤、交换机和客户设备问题，再转向存储内部。替换法适用于硬件故障，通过正常部件替换疑似异常部件来定位或排除故障，前提是事先准备相同备件。该FC链路场景应准备与疑似对象匹配的光模块和光纤跳线，若定位到接口模块也需准备相同接口模块。Brocade端口使用 sfpshow portnum 复核SFP信息；TX Power绝对值大于4.6表示SFP发光功率低、自身存在问题，RX Power绝对值大于5表示链路衰减较大、链路质量存在问题。",
+      "reasoning_outline": [
+        "在替换前先使用告警和性能证据缩小故障类型与位置",
+        "由多主机相似现象选择共性优先",
+        "由外部优先原则先检查FC链路外部部件",
+        "确认替换法仅用于硬件且依赖相同备件",
+        "把疑似部件映射到光模块、光纤跳线或接口模块备件",
+        "使用SFP命令和TX/RX不同阈值完成替换后的复核"
+      ],
+      "answer_format": "按替换前、替换条件、备件、复核四段编号",
+      "rubric_id": "R-OSD-MH-010",
+      "tags": ["共性告警", "替换法", "备件", "FC链路", "SFP复核"]
+    }
+  ]
+}

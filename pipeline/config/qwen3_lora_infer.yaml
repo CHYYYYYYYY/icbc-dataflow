@@ -1,0 +1,4 @@
+model_name_or_path: /path/to/Qwen3-8B
+adapter_name_or_path: /path/to/LLaMA-Factory/saves/qwen3-8b/lora/sft
+template: qwen3
+trust_remote_code: true

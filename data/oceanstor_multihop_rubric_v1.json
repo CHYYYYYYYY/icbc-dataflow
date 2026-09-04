@@ -1,0 +1,236 @@
+{
+  "rubric_name": "OceanStor_Dorado_MultiHop_Rubric_v1",
+  "version": "1.0.0",
+  "applies_to_dataset": "OceanStor_Dorado_Fault_Handling_MultiHop_Test_v1",
+  "scoring_scale": {
+    "min": 0,
+    "max": 100,
+    "pass_threshold": 75,
+    "excellent_threshold": 90,
+    "hard_fail_score_cap": 49,
+    "bands": [
+      {"range": "90-100", "label": "EXCELLENT", "meaning": "核心决策正确，多跳证据覆盖完整，技术细节可直接执行"},
+      {"range": "75-89", "label": "PASS", "meaning": "核心决策正确，主要证据链闭合，允许少量非关键遗漏"},
+      {"range": "60-74", "label": "BORDERLINE", "meaning": "方向基本正确，但存在关键跳转缺失或操作闭环不完整"},
+      {"range": "0-59", "label": "FAIL", "meaning": "核心决策错误、证据链断裂、技术事实错误或出现硬约束失败"}
+    ]
+  },
+  "global_hard_constraints": [
+    {
+      "id": "HC-GROUNDED",
+      "rule": "不得引入证据库未支持的具体命令、参数、版本、阈值、路径、时长、机制或操作。",
+      "failure_effect": "verdict=FAIL，最终分数最高49分"
+    },
+    {
+      "id": "HC-CORE",
+      "rule": "故障等级、处理方式、工具入口、日志范围或关键判断不得与标准答案的核心结论相反。",
+      "failure_effect": "verdict=FAIL，最终分数最高49分"
+    },
+    {
+      "id": "HC-TECH",
+      "rule": "题目要求的命令、端口、版本范围、阈值和单位必须准确；命令中的关键token或TX/RX阈值互换视为失败。",
+      "failure_effect": "verdict=FAIL，最终分数最高49分"
+    },
+    {
+      "id": "HC-SAFETY",
+      "rule": "不得给出与手册冲突的高风险顺序，例如在应备份或切换业务时直接继续操作、绕过授权、在明确阻断条件下强行开启功能。",
+      "failure_effect": "verdict=FAIL，最终分数最高49分"
+    },
+    {
+      "id": "HC-RELEVANCE",
+      "rule": "答案必须直接回应题目要求；只复述单一局部事实、没有形成至少两个证据节点之间的结论连接时不得判PASS。",
+      "failure_effect": "verdict=FAIL，最终分数最高49分"
+    }
+  ],
+  "universal_grading_rules": {
+    "semantic_equivalence": "允许同义改写、顺序等价重组和简洁表达，不要求与标准答案逐字一致。",
+    "citations": "模型答案不要求写页码或证据ID；证据ID只供评分器核验。",
+    "partial_credit": "每个criterion按其anchors独立给分；不得因答案整体流畅而补偿缺失的关键事实。",
+    "unsupported_detail": "无支撑的泛化口号不加分；无支撑的具体事实触发HC-GROUNDED。",
+    "meta_language": "出现“根据文档”“原文指出”“参考内容”等元信息不触发硬失败，但在表达质量项扣分；若大量元信息掩盖了直接回答，可触发HC-RELEVANCE。",
+    "structure": "答案只要层次清楚即可，不因未使用固定标题扣分；三级以上嵌套、重复总结和无关铺垫在表达质量项扣分。",
+    "score_calculation": "先按criteria累计0到100分，再检查硬约束。任一硬约束失败时verdict为FAIL且final_score=min(raw_score,49)；否则final_score=raw_score，达到75分判PASS。"
+  },
+  "item_rubrics": [
+    {
+      "rubric_id": "R-OSD-MH-001",
+      "item_id": "OSD-MH-001",
+      "criteria": [
+        {
+          "id": "C1",
+          "points": 20,
+          "description": "判定为中级故障并选择应急处理，同时说明现有信息不足以直接定为严重故障。",
+          "anchors": {"full": "20：三项均正确", "partial": "10：只答中级或只答应急处理", "zero": "0：等级或处理方式错误"}
+        },
+        {
+          "id": "C2",
+          "points": 20,
+          "description": "覆盖启动预案、收集信息、第一时间通告、确定影响范围、处理恢复、必要时联系支持和记录。",
+          "anchors": {"full": "20：覆盖至少6项且顺序合理", "partial": "10-16：覆盖3到5项", "zero": "0-6：只有泛化的“排查并修复”"}
+        },
+        {
+          "id": "C3",
+          "points": 25,
+          "description": "同时给出高级别告警优先、共性问题优先、外部问题优先于内部问题三条定位规则。",
+          "anchors": {"full": "25：三条完整且对象正确", "partial": "每正确一条得8分，三条全对补1分", "zero": "0：顺序相反"}
+        },
+        {
+          "id": "C4",
+          "points": 20,
+          "description": "数据丢失风险触发暂停主机业务或切换备机并备份，恢复时核心业务先于其他业务。",
+          "anchors": {"full": "20：保护动作和恢复优先级均完整", "partial": "10：只覆盖其中一组", "zero": "0：给出相反或高风险操作"}
+        },
+        {
+          "id": "C5",
+          "points": 15,
+          "description": "信息收集前包含授权、影响评估和必要备份，并列出至少三类具体证据。",
+          "anchors": {"full": "15：前置条件完整且证据具体", "partial": "6-12：部分覆盖", "zero": "0：绕过授权或没有具体证据"}
+        }
+      ],
+      "item_hard_fail_conditions": ["把该场景判为普通故障", "未出现严重故障证据却直接定为严重故障并据此采取额外动作", "将内部排查置于外部排查之前", "在数据丢失风险下建议继续业务而不保护数据"]
+    },
+    {
+      "rubric_id": "R-OSD-MH-002",
+      "item_id": "OSD-MH-002",
+      "criteria": [
+        {"id": "C1", "points": 15, "description": "由业务和性能无影响判定普通故障并采用普通故障处理。", "anchors": {"full": "15：等级与方式均正确", "partial": "8：只正确一个", "zero": "0：判为中级或严重"}},
+        {"id": "C2", "points": 20, "description": "收集前先评估影响、必要时备份并取得授权。", "anchors": {"full": "20：三项完整", "partial": "每项6分，三项全对补2分", "zero": "0：明确绕过授权"}},
+        {"id": "C3", "points": 35, "description": "准确给出 https://<管理网口IP>:8088、管理员凭据、进入故障界面并下载日志。", "anchors": {"full": "35：入口和操作闭合", "partial": "15-25：入口正确但步骤有遗漏", "zero": "0：端口错误或仍要求正常页面/CLI导出"}},
+        {"id": "C4", "points": 15, "description": "日志收集后仍无法排除时，携带信息联系华为技术支持。", "anchors": {"full": "15：信息与升级支持均明确", "partial": "8：只说联系支持", "zero": "0：无收尾"}},
+        {"id": "C5", "points": 15, "description": "回答直接、步骤有序，不编造故障页额外命令或操作。", "anchors": {"full": "15：精炼且无扩写", "partial": "8-12：有少量冗余", "zero": "0：存在具体编造"}}
+      ],
+      "item_hard_fail_conditions": ["8088写成其他端口", "建议继续使用已明确不可用的正常页面或CLI导出", "把业务无影响场景判成中级或严重故障", "绕过授权直接采集"]
+    },
+    {
+      "rubric_id": "R-OSD-MH-003",
+      "item_id": "OSD-MH-003",
+      "criteria": [
+        {"id": "C1", "points": 10, "description": "按外部后内部组织排查，先覆盖主机、HBA和交换机链路。", "anchors": {"full": "10：顺序和范围正确", "partial": "5：只提外部优先", "zero": "0：直接先查存储内部"}},
+        {"id": "C2", "points": 20, "description": "Linux侧准确给出UltraPath安装、物理路径和按需逻辑路径命令。", "anchors": {"full": "20：rpm命令、upadmin show path、upadmin show vlun id=?均正确", "partial": "每条正确得6分，三条全对补2分", "zero": "0：关键命令错误"}},
+        {"id": "C3", "points": 15, "description": "准确给出HBA型号命令及Qlogic/Emulex驱动版本分支。", "anchors": {"full": "15：三条命令及厂商映射正确", "partial": "每个正确事实5分", "zero": "0：厂商映射颠倒"}},
+        {"id": "C4", "points": 20, "description": "Brocade使用supportsave，并列全传输所需服务器、认证、协议和远端目录信息。", "anchors": {"full": "20：命令和五类参数完整", "partial": "10-16：命令正确但参数不全", "zero": "0：使用其他厂商命令"}},
+        {"id": "C5", "points": 35, "description": "使用sfpshow portnum，并将TX -5.0与4.6、RX -6.3与5分别比较，得到SFP自身问题和链路衰减问题两个并存判断。", "anchors": {"full": "35：命令、绝对值比较、阈值和双结论全对", "partial": "15-25：只正确解释一个读数或漏命令", "zero": "0：互换阈值、按有符号数错误比较或只做无依据二选一"}}
+      ],
+      "item_hard_fail_conditions": ["TX与RX阈值互换", "把-5.0或-6.3直接按有符号数判断为未超过阈值", "编造手册没有的FC排障命令", "把Brocade命令替换为Cisco命令"]
+    },
+    {
+      "rubric_id": "R-OSD-MH-004",
+      "item_id": "OSD-MH-004",
+      "criteria": [
+        {"id": "C1", "points": 20, "description": "识别6.1.8适用且650MB低于700MB，当前开启会失败，必须先解除内存阻断。", "anchors": {"full": "20：版本、比较和动作均正确", "partial": "10：只识别内存不足", "zero": "0：认为650MB可直接开启"}},
+        {"id": "C2", "points": 25, "description": "CLI切最小模式，准确执行开启命令并等待约十分钟。", "anchors": {"full": "25：前置、命令、等待完整", "partial": "12-20：命令正确但有遗漏", "zero": "0：命令关键token错误"}},
+        {"id": "C3", "points": 20, "description": "为最新数据先开始采集，并以所有事件出现“故障诊断信息采集成功”为创建前验收点。", "anchors": {"full": "20：动作和验收点均正确", "partial": "10：只提开始采集", "zero": "0：跳过采集直接创建"}},
+        {"id": "C4", "points": 20, "description": "诊断类型选性能异常，时间选最近4小时或自定义，并指出默认超时5分钟。", "anchors": {"full": "20：三项完整", "partial": "每项6分，三项全对补2分", "zero": "0：类型或时间范围错误"}},
+        {"id": "C5", "points": 15, "description": "通过任务ID查看进度或结果，覆盖异常、可能根因、修复建议和故障树。", "anchors": {"full": "15：入口和四类结果完整", "partial": "8-12：结果不全", "zero": "0：无结果查看"}}
+      ],
+      "item_hard_fail_conditions": ["建议在650MB剩余内存下强行开启", "开启命令中的TASK_FAULT_TREE_SWITCH或-s 1错误", "把诊断任务适用范围写成6.1.7及以前", "为最新数据跳过采集成功验收"]
+    },
+    {
+      "rubric_id": "R-OSD-MH-005",
+      "item_id": "OSD-MH-005",
+      "criteria": [
+        {"id": "C1", "points": 10, "description": "先记录设备身份、版本、故障准确时间和现象，用于确定导出窗口。", "anchors": {"full": "10：身份与时间均覆盖", "partial": "5：只覆盖一组", "zero": "0：未锚定故障时间"}},
+        {"id": "C2", "points": 15, "description": "SmartKit添加设备，包含管理IP、凭据和默认端口22。", "anchors": {"full": "15：字段与默认端口完整", "partial": "8-12：有遗漏", "zero": "0：端口错误"}},
+        {"id": "C3", "points": 30, "description": "正确进入历史性能监控，选择设备、导出历史性能数据并设置覆盖故障的开始和结束时间。", "anchors": {"full": "30：路径、类型和时间闭合", "partial": "15-24：缺一项", "zero": "0：导出错误的数据类型"}},
+        {"id": "C4", "points": 25, "description": "勾选ZIP以供eService查看，执行导出并以“收集完成”为完成标志。", "anchors": {"full": "25：目标格式、动作、验收点完整", "partial": "12-20：有一项遗漏", "zero": "0：未产生可交付结果"}},
+        {"id": "C5", "points": 20, "description": "用合并功能处理多个文件，必要时打开目录核对，并交华为工程师分析。", "anchors": {"full": "20：合并、核对、交付完整", "partial": "8-15：部分覆盖", "zero": "0：无交付闭环"}}
+      ],
+      "item_hard_fail_conditions": ["把默认端口写成非22", "未设置故障时间窗口却声称完成指定时段导出", "把非ZIP格式声称为可直接导入eService", "编造SmartKit之外的合并命令"]
+    },
+    {
+      "rubric_id": "R-OSD-MH-006",
+      "item_id": "OSD-MH-006",
+      "criteria": [
+        {"id": "C1", "points": 25, "description": "第一阶段选快速问题定位，准确说明近期日志范围、约60MB/控、约10分钟及两个排除项。", "anchors": {"full": "25：选择、体量、时长、范围完整", "partial": "12-20：核心正确但有遗漏", "zero": "0：把快速场景说成全部日志"}},
+        {"id": "C2", "points": 30, "description": "第二阶段选深度问题分析，覆盖全部日志、Smart、DHA、CLI回显、约140MB/控和约30分钟。", "anchors": {"full": "30：六项完整", "partial": "每项5分", "zero": "0：仍只收近期日志"}},
+        {"id": "C3", "points": 30, "description": "识别深度场景默认不含管理面日志，并因登录失败显式选择包含管理面日志。", "anchors": {"full": "30：限制、场景关联和改选动作完整", "partial": "15：只说要管理面日志但未解释默认缺口", "zero": "0：沿用默认设置"}},
+        {"id": "C4", "points": 15, "description": "完成设置后执行收集，并给出页面状态或打开收集目录的结果检查入口。", "anchors": {"full": "15：执行和检查闭环", "partial": "8：只说收集", "zero": "0：无落地动作"}}
+      ],
+      "item_hard_fail_conditions": ["把快速与深度的体量或时长互换", "管理面登录故障仍明确排除管理面日志", "编造不在手册中的第三种预设场景"]
+    },
+    {
+      "rubric_id": "R-OSD-MH-007",
+      "item_id": "OSD-MH-007",
+      "criteria": [
+        {"id": "C1", "points": 35, "description": "选择全部日志并包含管理面日志，准确解释近期日志虽不超过15天但排除管理面日志。", "anchors": {"full": "35：选择、范围和因果完整", "partial": "18-28：结论正确但解释不全", "zero": "0：选择近期日志"}},
+        {"id": "C2", "points": 25, "description": "口令8到16字符、必须有特殊字符，并含大小写字母和数字三类中的任意两类。", "anchors": {"full": "25：三组规则完整", "partial": "每组8分，三组全对补1分", "zero": "0：给出相反规则"}},
+        {"id": "C3", "points": 15, "description": "解密环境为支持OpenSSL 1.1.1f及以上版本的Linux。", "anchors": {"full": "15：系统与版本完整", "partial": "8：只提OpenSSL或Linux", "zero": "0：版本范围错误"}},
+        {"id": "C4", "points": 25, "description": "解密命令准确包含enc、aes-256-ctr、-d、-k、-in和-out。", "anchors": {"full": "25：关键token与参数角色全对", "partial": "12-20：命令主体正确但漏非关键说明", "zero": "0：算法、方向或输入输出错误"}}
+      ],
+      "item_hard_fail_conditions": ["选择近期日志作为最终交付范围", "加密口令规则错误", "OpenSSL最低版本写错", "把-d写成加密方向或更换aes-256-ctr算法"]
+    },
+    {
+      "rubric_id": "R-OSD-MH-008",
+      "item_id": "OSD-MH-008",
+      "criteria": [
+        {"id": "C1", "points": 20, "description": "由多部件故障、部分生产不可用和高数据丢失风险判定严重故障并采用应急处理。", "anchors": {"full": "20：等级、依据、方式完整", "partial": "10：只答严重故障或应急处理", "zero": "0：等级错误"}},
+        {"id": "C2", "points": 25, "description": "立即暂停主机业务或切换备机，并及时备份。", "anchors": {"full": "25：业务保护和备份完整", "partial": "12：只覆盖一组", "zero": "0：继续业务且不保护数据"}},
+        {"id": "C3", "points": 25, "description": "覆盖启动预案、第一时间通告、确定影响范围、处理恢复和必要时联系支持。", "anchors": {"full": "25：五项完整", "partial": "每项5分", "zero": "0：无应急协同"}},
+        {"id": "C4", "points": 15, "description": "恢复时先核心业务、后其他业务。", "anchors": {"full": "15：优先级明确", "partial": "8：只说恢复业务未区分优先级", "zero": "0：顺序相反"}},
+        {"id": "C5", "points": 15, "description": "收集前有授权和影响评估，全程记录所有操作、故障信息和处理步骤。", "anchors": {"full": "15：前置和记录完整", "partial": "6-12：部分覆盖", "zero": "0：绕过授权且不记录"}}
+      ],
+      "item_hard_fail_conditions": ["判为普通或中级故障", "存在高数据丢失风险仍建议继续主机业务且不切换不备份", "把非核心业务置于核心业务之前恢复", "绕过授权实施采集"]
+    },
+    {
+      "rubric_id": "R-OSD-MH-009",
+      "item_id": "OSD-MH-009",
+      "criteria": [
+        {"id": "C1", "points": 35, "description": "未修复告警进入当前告警，提示级事件和已修复告警进入所有事件。", "anchors": {"full": "35：三类对象映射全对", "partial": "每个正确映射11分，三项全对补2分", "zero": "0：两个入口混淆"}},
+        {"id": "C2", "points": 20, "description": "两个入口均可按级别、对象、发生时间筛选，并按描述右侧修复建议处理。", "anchors": {"full": "20：筛选维度与处理动作完整", "partial": "10-16：有遗漏", "zero": "0：无处理动作"}},
+        {"id": "C3", "points": 20, "description": "导出全部为tgz、所选为xls，并且不得修改文件内容。", "anchors": {"full": "20：格式映射和完整性要求均正确", "partial": "10：只答格式或只答不修改", "zero": "0：格式互换"}},
+        {"id": "C4", "points": 25, "description": "模拟告警存在时再次发送无效；测试前确认已手工清除，测试后再次手工清除。", "anchors": {"full": "25：有效性条件与前后闭环完整", "partial": "12-20：只覆盖测试前或测试后", "zero": "0：建议反复发送已存在告警"}}
+      ],
+      "item_hard_fail_conditions": ["把未修复告警放到所有事件作为唯一处理入口", "把tgz和xls对应范围互换", "建议修改导出的告警事件文件", "忽略已存在模拟告警再次发送无效的条件"]
+    },
+    {
+      "rubric_id": "R-OSD-MH-010",
+      "item_id": "OSD-MH-010",
+      "criteria": [
+        {"id": "C1", "points": 25, "description": "替换前用告警和性能数据缩小范围，先共性后个别、先外部后内部。", "anchors": {"full": "25：证据方法与两条顺序完整", "partial": "每部分8分，三项全对补1分", "zero": "0：直接替换且不分析"}},
+        {"id": "C2", "points": 25, "description": "替换法只用于硬件故障，以正常部件替换疑似异常部件，前提是相同备件。", "anchors": {"full": "25：适用性、方法和前提完整", "partial": "每项8分，三项全对补1分", "zero": "0：用于软件故障或无需相同备件"}},
+        {"id": "C3", "points": 20, "description": "FC场景备件映射到光模块、光纤跳线，并在定位到接口模块时准备相同接口模块。", "anchors": {"full": "20：三类备件及条件正确", "partial": "每类6分，完整补2分", "zero": "0：只列无关备件"}},
+        {"id": "C4", "points": 30, "description": "Brocade用sfpshow portnum复核，TX绝对值大于4.6判断SFP自身问题，RX绝对值大于5判断链路衰减问题。", "anchors": {"full": "30：命令、两个阈值和判断完整", "partial": "15-24：只正确一组或漏命令", "zero": "0：阈值互换或命令错误"}}
+      ],
+      "item_hard_fail_conditions": ["未分析就直接替换并声称符合手册流程", "认为替换法无需相同备件", "TX和RX阈值或对应结论互换", "编造手册未提供的替换后验证命令"]
+    }
+  ],
+  "grader_output_schema": {
+    "item_id": "string",
+    "hard_constraints": [
+      {"id": "string", "pass": "boolean", "reason": "string"}
+    ],
+    "criterion_scores": [
+      {"criterion_id": "string", "score": "number", "max_score": "number", "reason": "string", "matched_evidence_ids": ["string"]}
+    ],
+    "raw_score": "number",
+    "final_score": "number",
+    "verdict": "EXCELLENT|PASS|BORDERLINE|FAIL",
+    "missing_hops": ["string"],
+    "unsupported_claims": ["string"],
+    "main_issue": "string"
+  },
+  "grader_prompt_template": "你是严格的技术文档多跳QA评分器。输入包含题目、候选答案、证据库、标准答案和对应rubric。只允许使用证据库核验事实。先逐条检查全局与单题硬约束，再按每个criterion的anchors独立给分。允许同义改写，不要求候选答案给出证据ID，也不因文风或长度额外加分。任何未被证据支持的具体命令、参数、版本、阈值、路径或机制都列入unsupported_claims；关键证据跳转缺失列入missing_hops。按grader_output_schema输出严格JSON，不输出额外文字。",
+  "evaluation_reporting": {
+    "required_metrics": [
+      "mean_final_score",
+      "median_final_score",
+      "pass_rate",
+      "excellent_rate",
+      "hard_fail_rate",
+      "per_item_score",
+      "per_tag_mean_score",
+      "multi_hop_complete_rate",
+      "command_value_threshold_accuracy"
+    ],
+    "multi_hop_complete_definition": "单题所有criteria得分均达到各自满分的70%，且无missing_hops和硬约束失败。",
+    "command_value_threshold_accuracy_definition": "所有被题目要求的命令、端口、版本、数值、单位和阈值中，候选答案正确给出的数量除以其尝试给出的数量；遗漏另由criterion覆盖率惩罚。",
+    "comparison_protocol": [
+      "Base模型与微调模型使用完全相同的10道题、system prompt、解码参数和最大输出长度。",
+      "不要把reference_answer、reasoning_outline、evidence ID或rubric内容放入被测模型输入。",
+      "评分器对模型名称盲化，并随机化两个模型答案的呈现顺序。",
+      "同时报告总分变化、通过率变化、硬失败率变化和按tag分组变化，避免只看平均分。",
+      "保留逐题评分JSON，人工复核所有硬失败以及两个模型分差大于20分的样本。",
+      "若用于稳定版本比较，至少重复3次解码或扩充测试集，并报告均值与波动；本10题集主要用于小批量回归和能力探针。"
+    ]
+  }
+}

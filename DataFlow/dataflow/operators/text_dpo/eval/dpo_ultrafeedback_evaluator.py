@@ -1,0 +1,268 @@
+"""
+DPO UltraFeedback 评估算子
+参考 distilabel 的 UltraFeedback 任务实现
+用于对多个生成的回复进行质量评分
+"""
+import json
+import re
+from typing import List
+from dataflow.utils.registry import OPERATOR_REGISTRY
+from dataflow import get_logger
+from dataflow.core import OperatorABC
+from dataflow.utils.storage import DataFlowStorage
+from dataflow.core import LLMServingABC
+
+
+@OPERATOR_REGISTRY.register()
+class DPOUltraFeedbackEvaluator(OperatorABC):
+    """
+    DPO UltraFeedback 评估算子
+    
+    功能：
+    - 使用 LLM 对多个生成的回复进行质量评分
+    - 参考原始文本内容判断回复的准确性和是否有虚构
+    - 支持多个评估维度
+    """
+    
+    ASPECTS = {
+        "overall-rating": {
+            "description": "综合评估回复的整体质量，包括准确性、是否符合原文、是否有虚构等",
+            "criteria": """评估标准：
+1分 - 回复完全不相关、有严重虚构、或与原文内容相悖
+2分 - 回复有重大问题，包含明显虚构或错误信息
+3分 - 回复基本正确但有轻微虚构或不够准确
+4分 - 回复质量良好，基本符合原文，准确且有帮助
+5分 - 回复优秀，完全基于原文，信息准确、全面、无虚构"""
+        },
+        "helpfulness": {
+            "description": "评估回复对用户的帮助程度",
+            "criteria": """评估标准：
+1分 - 完全没有帮助，无法解决用户问题
+2分 - 帮助有限，只解决了部分问题
+3分 - 有一定帮助，但缺乏深度或细节
+4分 - 很有帮助，基本满足用户需求
+5分 - 极其有帮助，超出预期地解决了问题"""
+        },
+        "honesty": {
+            "description": "评估回复的诚实度和不确定性表达",
+            "criteria": """评估标准：
+1分 - 自信地给出错误信息或虚构内容
+2分 - 给出不确定的错误信息
+3分 - 给出正确信息但表达过度不确定
+4分 - 诚实地表达不确定性，信息基本正确
+5分 - 完全诚实，正确表达确定性/不确定性"""
+        },
+        "faithfulness": {
+            "description": "评估回复是否忠实于原文内容，是否有虚构",
+            "criteria": """评估标准：
+1分 - 严重虚构，与原文完全不符
+2分 - 包含多处虚构或与原文不一致的内容
+3分 - 基本符合原文，但有轻微偏差或推断
+4分 - 较好地遵循原文内容，偶有合理推断
+5分 - 完全忠实于原文，所有信息都有据可查"""
+        },
+        "truthfulness": {
+            "description": "评估回复内容的真实性和准确性",
+            "criteria": """评估标准：
+1分 - 包含严重的事实错误或虚假信息
+2分 - 包含多处事实错误
+3分 - 基本准确但有轻微错误
+4分 - 信息准确可靠
+5分 - 完全准确，引用可靠来源"""
+        }
+    }
+    
+    def __init__(
+        self,
+        llm_serving: LLMServingABC = None,
+        aspect: str = "overall-rating"
+    ):
+        """
+        初始化 UltraFeedback 评估器
+        
+        Args:
+            llm_serving: 用于评估的 LLM 服务实例
+            aspect: 评估维度
+        """
+        self.logger = get_logger()
+        self.logger.info(f'Initializing {self.__class__.__name__}...')
+        
+        if aspect not in self.ASPECTS:
+            raise ValueError(f"不支持的评估维度: {aspect}. 支持: {list(self.ASPECTS.keys())}")
+        
+        self.llm_serving = llm_serving
+        self.aspect = aspect
+        self.aspect_info = self.ASPECTS[aspect]
+        
+        self.logger.info(f'{self.__class__.__name__} initialized with aspect: {aspect}')
+
+    @staticmethod
+    def get_desc(lang: str = "zh"):
+        if lang == "zh":
+            return (
+                "DPO UltraFeedback 评估算子。使用 LLM 对多个回复进行质量评分。\n"
+                "输入参数：\n"
+                "- llm_serving：用于评估的 LLM 服务\n"
+                "- aspect：评估维度\n"
+                "- input_content_key：输入原始文本字段名（用于判断回复是否准确）\n"
+                "- input_instruction_key：输入问题字段名\n"
+                "- input_generations_key：输入回复列表字段名\n"
+                "- output_ratings_key：输出评分列表字段名\n"
+                "- output_rationales_key：输出评分理由列表字段名"
+            )
+        else:
+            return "DPO UltraFeedback evaluator. Rates multiple responses using LLM with reference to source content."
+
+    def _build_evaluation_prompt(self, raw_content: str, instruction: str, generations: List[str]) -> str:
+        """构建评估 prompt，包含原始文本作为参考"""
+        generations_text = ""
+        for i, gen in enumerate(generations, 1):
+            generations_text += f"\n### 回复 {i}:\n{gen}\n"
+        
+        return f"""请评估以下基于原文生成的问答对的多个回复质量:
+
+## 原始文本（作为事实参考）:
+{raw_content}
+
+## 问题:
+{instruction}
+
+## 待评估的回复:
+{generations_text}
+
+评估要点：
+1. 回复是否准确回答了问题
+2. 回复内容是否与原始文本一致，是否有虚构或捏造的信息
+3. 回复是否完整、清晰、有帮助
+
+请对每个回复进行评分，严格按以下 JSON 格式输出:
+{{
+    "ratings": [回复1评分, 回复2评分, ...],
+    "rationales": ["回复1的评分理由", "回复2的评分理由", ...]
+}}
+
+注意: ratings 中的评分必须是 1-5 的整数。"""
+
+    def _build_system_prompt(self) -> str:
+        """构建系统 prompt"""
+        return f"""你是一个专业的文本质量评估专家。你的任务是评估 AI 助手基于原文生成的回复质量。
+
+评估维度: {self.aspect_info['description']}
+
+{self.aspect_info['criteria']}
+
+重要提示：
+- 你会看到原始文本内容作为事实依据
+- 请仔细对比回复内容与原始文本，判断回复是否准确、是否有虚构
+- 如果回复包含原文中没有的信息（虚构），应该给予较低评分
+- 如果回复准确引用或总结了原文内容，应该给予较高评分
+
+你需要为每个回复给出:
+1. 一个 1-5 的整数评分
+2. 简短的评分理由（特别说明是否有虚构）
+
+请严格按照 JSON 格式输出你的评估结果。"""
+
+    def _parse_evaluation_response(self, response: str, num_generations: int) -> dict:
+        """解析 LLM 的评估响应"""
+        default_result = {
+            "ratings": [3] * num_generations,
+            "rationales": ["解析失败，使用默认评分"] * num_generations
+        }
+        
+        try:
+            json_match = re.search(r'\{[\s\S]*\}', response)
+            if json_match:
+                result = json.loads(json_match.group())
+                
+                ratings = result.get("ratings", [])
+                rationales = result.get("rationales", [])
+                
+                validated_ratings = []
+                for r in ratings:
+                    if isinstance(r, (int, float)) and 1 <= r <= 5:
+                        validated_ratings.append(int(r))
+                    else:
+                        validated_ratings.append(3)
+                
+                while len(validated_ratings) < num_generations:
+                    validated_ratings.append(3)
+                validated_ratings = validated_ratings[:num_generations]
+                
+                while len(rationales) < num_generations:
+                    rationales.append("无评分理由")
+                rationales = rationales[:num_generations]
+                
+                return {"ratings": validated_ratings, "rationales": rationales}
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            self.logger.warning(f"Failed to parse evaluation response: {e}")
+        
+        return default_result
+
+    def run(
+        self,
+        storage: DataFlowStorage,
+        input_content_key: str = "raw_content",
+        input_instruction_key: str = "instruction",
+        input_generations_key: str = "generations",
+        output_ratings_key: str = "ratings",
+        output_rationales_key: str = "rationales"
+    ):
+        """
+        运行评估算子
+        
+        Args:
+            storage: DataFlow 存储对象
+            input_content_key: 输入原始文本字段名，默认为 'raw_content'（用于判断回复准确性）
+            input_instruction_key: 输入问题字段名，默认为 'instruction'
+            input_generations_key: 输入回复列表字段名，默认为 'generations'
+            output_ratings_key: 输出评分列表字段名，默认为 'ratings'
+            output_rationales_key: 输出评分理由列表字段名，默认为 'rationales'
+        
+        Returns:
+            输出字段名列表
+        """
+        self.logger.info(f"Running {self.__class__.__name__}...")
+        
+        dataframe = storage.read("dataframe")
+        
+        # 验证必需字段
+        if input_content_key not in dataframe.columns:
+            raise ValueError(f"输入数据缺少 '{input_content_key}' 字段（原始文本，用于判断回复准确性）")
+        if input_instruction_key not in dataframe.columns:
+            raise ValueError(f"输入数据缺少 '{input_instruction_key}' 字段")
+        if input_generations_key not in dataframe.columns:
+            raise ValueError(f"输入数据缺少 '{input_generations_key}' 字段")
+        
+        raw_contents = dataframe[input_content_key].tolist()
+        instructions = dataframe[input_instruction_key].tolist()
+        generations_list = dataframe[input_generations_key].tolist()
+        
+        self.logger.info(f"Evaluating {len(instructions)} instruction-response pairs with source content reference...")
+        
+        system_prompt = self._build_system_prompt()
+        evaluation_prompts = [
+            self._build_evaluation_prompt(content, inst, gens) 
+            for content, inst, gens in zip(raw_contents, instructions, generations_list)
+        ]
+        
+        responses = self.llm_serving.generate_from_input(
+            user_inputs=evaluation_prompts,
+            system_prompt=system_prompt
+        )
+        
+        all_ratings = []
+        all_rationales = []
+        for response, generations in zip(responses, generations_list):
+            result = self._parse_evaluation_response(response, len(generations))
+            all_ratings.append(result["ratings"])
+            all_rationales.append(result["rationales"])
+        
+        dataframe[output_ratings_key] = all_ratings
+        dataframe[output_rationales_key] = all_rationales
+        
+        storage.write(dataframe)
+        
+        self.logger.info(f"Evaluation completed for {len(instructions)} samples.")
+        
+        return [output_ratings_key, output_rationales_key]
